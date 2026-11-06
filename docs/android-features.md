@@ -31,3 +31,11 @@ in the [Android guide](android.md#check).
 Priorities after this change: world import/export, Minecraft Services approval and production account validation,
 hardware gamepads, then measured lifecycle and thermal behavior. Preserve
 the current engine performance baseline while adding these platform bridges.
+
+## Native `.hnmod` packages
+
+Native source mods are not supported on Android yet. The existing Wasmtime
+runtime is for sandboxed `.hmod` packages; it does not compile native mixin
+bundles. See the [Android native-mod support plan](android-native-mods.md) for
+the upstream package format, ARM64 build requirements, trust boundary and
+physical-device completion tests.
