@@ -257,6 +257,23 @@ mod tests {
         let content = b"id='test_content'\nname='Content'\nversion='1'\napi='0.2'\ncapabilities=['registries']\n";
         std::fs::write(&path, archive(&[("horizon-mod.toml", content)])).unwrap();
         assert!(validate(&path, Kind::Mods, "Content.hmod", || false).is_ok());
+        let native_manifest = br#"{"schema":1,"id":"test_native","version":"1.0.0","game":"26.3","horizon":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","mixins":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}"#;
+        let native_mixin = format!(
+            "[mod]\nid = \"test_native\"\nversion = \"1.0.0\"\n[compatibility]\nhorizon_revision = \"{}\"\n",
+            "a".repeat(40)
+        );
+        std::fs::write(
+            &path,
+            archive(&[
+                ("horizon-native.json", native_manifest),
+                ("mixins/test_native/horizon-mixin.toml", native_mixin.as_bytes()),
+                ("mixins/test_native/src/lib.rs", b"// native source"),
+            ]),
+        )
+        .unwrap();
+        assert!(Kind::Mods.accepts("test_native.hnmod"));
+        assert!(validate(&path, Kind::Mods, "test_native.hnmod", || false).is_ok());
+        assert!(validate(&path, Kind::Mods, "test_native.hmod", || false).is_err());
         let code = b"id='test_code'\nname='Code'\nversion='1'\napi='0.1'\ncapabilities=['hud']\n";
         std::fs::write(&path, archive(&[("horizon-mod.toml", code)])).unwrap();
         assert!(validate(&path, Kind::Mods, "Code.hmod", || false).is_err());
