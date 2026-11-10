@@ -9,6 +9,7 @@ on:
       - "crates/horizon-client/src/android/documents.rs"
       - "crates/horizon-client/src/android/launcher_pages.rs"
       - "crates/horizon-mods/**"
+      - "tools/test_android_content.py"
       - "Cargo.toml"
       - "Cargo.lock"
       - ".github/workflows/android-native-mods.yml"
