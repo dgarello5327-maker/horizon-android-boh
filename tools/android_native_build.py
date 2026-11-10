@@ -103,6 +103,12 @@ def unpack(path, out):
             raise ValueError("ID/version dei due manifest .hnmod non corrispondono")
         if mixin_manifest.get("compatibility", {}).get("horizon_revision") != horizon:
             raise ValueError("La revisione Horizon non corrisponde nei due manifest")
+        unsupported = {"api", "dependencies", "crate", "post_build"} & set(mixin_manifest)
+        if unsupported:
+            raise ValueError("Questa prima pipeline ARM64 non supporta ancora le funzioni native avanzate: " + ", ".join(sorted(unsupported)))
+        injections = mixin_manifest.get("injection", [])
+        if any(isinstance(item, dict) and "trait_method" in item for item in injections):
+            raise ValueError("Le trait_method richiedono il generatore API nativo, non ancora portato su Android")
         for e in entries:
             if e.is_dir():
                 continue
