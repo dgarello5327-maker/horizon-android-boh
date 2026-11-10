@@ -30,7 +30,7 @@ impl Kind {
     pub fn accepts(self, name: &str) -> bool {
         let lower = name.to_ascii_lowercase();
         match self {
-            Self::Mods => lower.ends_with(".hmod"),
+            Self::Mods => lower.ends_with(".hmod") || lower.ends_with(".hnmod"),
             Self::Packs => lower.ends_with(".zip"),
             Self::Shaders => lower.ends_with(".zip") || lower.ends_with(".hshader"),
         }
@@ -63,6 +63,16 @@ pub fn validate(
         );
     }
     let file = std::fs::File::open(path)?;
+    if kind == Kind::Mods && name.to_ascii_lowercase().ends_with(".hnmod") {
+        if file.metadata()?.len() > 64 << 20 {
+            return Err("Native Horizon mod exceeds 64 MiB".into());
+        }
+        // Use the upstream native bundle reader: it enforces the 512-entry,
+        // 64 MiB expanded-size, manifest, pin, path and file-type rules.
+        horizon_mods::index::native::Bundle::read(path)
+            .map_err(|e| format!("Invalid native Horizon mod: {e}"))?;
+        return Ok(false);
+    }
     if kind == Kind::Mods && file.metadata()?.len() > 32 << 20 {
         return Err("Horizon mod exceeds 32 MiB".into());
     }
