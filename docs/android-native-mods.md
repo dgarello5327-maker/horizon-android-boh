@@ -1,9 +1,11 @@
 # Android native mod support plan
 
-Status: design only. Android does **not** currently load `.hnmod` files. The
-existing Android mod runtime is the sandboxed Wasmtime `.hmod` path on 64-bit
-builds. Do not label this document or a build as native-mod support until the
-implementation and device tests below pass.
+Status: `.hnmod` import and validation are implemented on the Android branch. The
+app can import from the Android document picker, a direct HTTPS URL or the Horizon
+registry; registry downloads are checked against the index hash and signature.
+Imported bundles are stored in `horizon-mods/` as source. They are **not compiled
+or executed** by Android yet. The existing runtime remains the sandboxed Wasmtime
+`.hmod` path on 64-bit builds.
 
 ## What a native package contains
 
@@ -71,15 +73,12 @@ measurements on the physical device.
 ## Current implementation boundary
 
 - Sandboxed `.hmod`: supported by the existing Wasmtime runtime on 64-bit builds.
-- Source `.hnmod`: not supported on Android yet; requires the build pipeline above.
+- Source `.hnmod`: import, upstream-format validation and verified registry download are implemented; Android compilation and execution are not.
 - Prebuilt ARM64 code inside `.hnmod`: not part of the current upstream package
   schema and must be rejected until a separately specified artifact format exists.
 - Fabric, Forge and NeoForge JARs: not executable by Horizon Android.
 
 ## Completion criteria
 
-Native support is complete only when the parser has upstream-compatible tests,
-the CI build produces a verified ARM64 game artifact from a real source bundle,
-the app enforces trust consent and rollback, and a physical Galaxy A54 completes
-the end-to-end tests above. Until then, the UI and documentation must continue
-to say that native `.hnmod` support is unavailable.
+Native execution support is complete only when the Android build pipeline produces a verified ARM64 game artifact from a real source bundle,
+the app enforces trust consent and rollback, and a physical Galaxy A54 completes the end-to-end tests above.
