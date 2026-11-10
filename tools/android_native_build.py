@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Build an Android ARM64 APK with one explicitly trusted Horizon .hnmod."""
-import argparse, hashlib, ipaddress, json, os, re, shutil, socket, subprocess, sys, urllib.parse, urllib.request, zipfile
+import argparse, hashlib, ipaddress, json, os, re, shutil, socket, subprocess, sys, tomllib, urllib.parse, urllib.request, zipfile
 from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -80,17 +80,29 @@ def unpack(path, out):
         if raw_manifest is None:
             raise ValueError("Manca horizon-native.json")
         m = json.loads(raw_manifest)
+        allowed = {"schema", "id", "version", "game", "horizon", "mixins", "hooks"}
+        if not isinstance(m, dict) or set(m) - allowed or m.get("schema") != 1:
+            raise ValueError("Schema .hnmod non valido o campi sconosciuti")
         mid, horizon, mixins = m.get("id", ""), m.get("horizon", ""), m.get("mixins", "")
         game = m.get("game", "")
+        version = m.get("version", "")
         pinned_game = json.loads((ROOT / "research-lock.json").read_text())["minecraft"]["version"]
         if game != pinned_game:
             raise ValueError(f".hnmod targets Minecraft {game!r}, but this Android build targets {pinned_game}")
-        if m.get("schema") != 1 or not isinstance(mid, str) or not MOD_ID.fullmatch(mid):
-            raise ValueError("Manifest .hnmod non valido")
-        if not REV.fullmatch(horizon) or not REV.fullmatch(mixins):
+        if not isinstance(mid, str) or not MOD_ID.fullmatch(mid) or not isinstance(version, str) or not version.strip():
+            raise ValueError("ID/version .hnmod non validi")
+        if not isinstance(horizon, str) or not REV.fullmatch(horizon) or not isinstance(mixins, str) or not REV.fullmatch(mixins):
             raise ValueError("Revisioni Horizon/horizon-mixins non valide")
-        if f"mixins/{mid}/horizon-mixin.toml" not in names:
+        if "hooks" in m and (not isinstance(m["hooks"], int) or isinstance(m["hooks"], bool) or m["hooks"] < 1):
+            raise ValueError("Versione hook API non valida")
+        manifest_path = f"mixins/{mid}/horizon-mixin.toml"
+        if manifest_path not in names:
             raise ValueError("Manifest horizon-mixin.toml mancante")
+        mixin_manifest = tomllib.loads(z.read(manifest_path).decode("utf-8"))
+        if mixin_manifest.get("mod", {}).get("id") != mid or mixin_manifest.get("mod", {}).get("version") != version:
+            raise ValueError("ID/version dei due manifest .hnmod non corrispondono")
+        if mixin_manifest.get("compatibility", {}).get("horizon_revision") != horizon:
+            raise ValueError("La revisione Horizon non corrisponde nei due manifest")
         for e in entries:
             if e.is_dir():
                 continue
