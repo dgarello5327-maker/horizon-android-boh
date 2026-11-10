@@ -3,7 +3,7 @@
 A native Android port of [Horizon](https://github.com/ludovic111/horizon), the
 Rust engine for Minecraft Java 26.3. Unofficial and in active development.
 
-**Android 9+ · Vulkan · Four touch schemes · Sandboxed `.hmod` mods**
+**Android 9+ · Vulkan · Four touch schemes · Sandboxed `.hmod` mods · `.hnmod` source import**
 
 [Download APK](https://github.com/Vasysik/horizon-android/releases) · [Build & play](docs/android.md) · [Contribute](CONTRIBUTING_ANDROID.md) ·
 [Report an Android bug](https://github.com/Vasysik/horizon-android/issues/new?template=android-bug.yml) ·
