@@ -89,7 +89,7 @@ jobs:
             --java-home "$JAVA_HOME" \
             --gradle "$(command -v gradle)" \
             --ndk-version "$ANDROID_NDK_VERSION" \
-            --build-tools-version "$ANDROID_BUILD_TOOLS_VERSION" \\
+            --build-tools-version "$ANDROID_BUILD_TOOLS_VERSION" \
             --dev-version-code "$BUILD_VERSION_CODE"
 
       - name: Upload ARM64 APK
