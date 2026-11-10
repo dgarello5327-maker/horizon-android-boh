@@ -607,11 +607,34 @@ impl Catalog {
                 let bundle = horizon_mods::index::native::Bundle::read(&fetched)?;
                 let directory = game.join("horizon-mods");
                 std::fs::create_dir_all(&directory).map_err(|e| e.to_string())?;
+                if std::fs::symlink_metadata(&directory)
+                    .is_ok_and(|metadata| metadata.file_type().is_symlink())
+                {
+                    return Err("Refusing a redirected native-mod directory".into());
+                }
                 let destination = directory.join(format!("{}.hnmod", bundle.manifest.id));
-                let staged = directory.join(format!(".{}.hnmod.partial", bundle.manifest.id));
+                if std::fs::symlink_metadata(&destination)
+                    .is_ok_and(|metadata| !metadata.is_file() || metadata.file_type().is_symlink())
+                {
+                    return Err("Refusing to replace a non-regular native bundle".into());
+                }
+                let staged = directory.join(format!(
+                    ".{}.{}.hnmod.partial",
+                    bundle.manifest.id,
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map_err(|e| e.to_string())?
+                        .as_nanos()
+                ));
                 std::fs::copy(&fetched, &staged).map_err(|e| e.to_string())?;
                 if destination.exists() {
                     let backup = directory.join(format!("{}.hnmod.previous", bundle.manifest.id));
+                    if std::fs::symlink_metadata(&backup)
+                        .is_ok_and(|metadata| !metadata.is_file() || metadata.file_type().is_symlink())
+                    {
+                        let _ = std::fs::remove_file(&staged);
+                        return Err("Refusing to overwrite an unsafe native-mod backup".into());
+                    }
                     std::fs::copy(&destination, backup).map_err(|e| e.to_string())?;
                 }
                 std::fs::rename(&staged, &destination).map_err(|e| e.to_string())?;
