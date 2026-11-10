@@ -81,6 +81,10 @@ def unpack(path, out):
             raise ValueError("Manca horizon-native.json")
         m = json.loads(raw_manifest)
         mid, horizon, mixins = m.get("id", ""), m.get("horizon", ""), m.get("mixins", "")
+        game = m.get("game", "")
+        pinned_game = json.loads((ROOT / "research-lock.json").read_text())["minecraft"]["version"]
+        if game != pinned_game:
+            raise ValueError(f".hnmod targets Minecraft {game!r}, but this Android build targets {pinned_game}")
         if m.get("schema") != 1 or not isinstance(mid, str) or not MOD_ID.fullmatch(mid):
             raise ValueError("Manifest .hnmod non valido")
         if not REV.fullmatch(horizon) or not REV.fullmatch(mixins):
