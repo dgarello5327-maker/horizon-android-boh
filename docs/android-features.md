@@ -16,7 +16,7 @@ in the [Android guide](android.md#check).
 | Horizon clipboard actions | Newly connected to Android ClipboardManager for explicit text copy/paste; no background clipboard polling or file-URI reads |
 | Sound and subtitles | AAudio mixer and downloaded sound assets; existing category volumes, subtitles and accessibility settings remain available |
 | Graphics / streaming | Client-resolution presets and numeric input scale the complete frame, including menus and HUD, from 25–100%, subject to minimum menu dimensions. Existing game graphics controls remain available; launcher selects real Vulkan draw paths |
-| Sandboxed Horizon mods | 64-bit builds: Wasmtime `.hmod` runtime; 32-bit omits this runtime; existing capabilities and errors appear in the game mod menu. Official Horizon Mods catalog and direct HTTPS import; no Java-mod search or Java/Mixin execution |
+| Horizon mods | 64-bit builds: Wasmtime `.hmod` runtime; 32-bit omits this runtime. Android imports and validates source-only `.hnmod` bundles from Files, HTTPS and the Horizon registry, checking the upstream bundle schema and registry hashes/signatures. Native source is stored but not compiled or executed yet; Java loaders remain unsupported |
 | Resource packs | Checksum-verified resource-pack search/install; modpack browsing, importing, selection and automatic launch hooks are removed on Android |
 | APK distribution | Dedicated `--public` build: 32 generated tables, original resources downloaded from official sources on the phone, no automatic agent socket; no player PC preparation |
 | Single player | Default integrated server and optional in-frame path. Editor pauses unpublished single player through the engine pause decision |
@@ -34,8 +34,9 @@ the current engine performance baseline while adding these platform bridges.
 
 ## Native `.hnmod` packages
 
-Native source mods are not supported on Android yet. The existing Wasmtime
-runtime is for sandboxed `.hmod` packages; it does not compile native mixin
-bundles. See the [Android native-mod support plan](android-native-mods.md) for
+Android now imports and validates native `.hnmod` source bundles from Files,
+HTTPS URLs and the Horizon registry. Registry downloads are checked against the
+index hash and signature. The existing Wasmtime runtime is for sandboxed `.hmod`
+packages; native source is stored but not compiled or executed yet. See the [Android native-mod support plan](android-native-mods.md) for
 the upstream package format, ARM64 build requirements, trust boundary and
 physical-device completion tests.
