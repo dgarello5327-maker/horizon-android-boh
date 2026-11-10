@@ -122,6 +122,7 @@ def main():
     p.add_argument("--gradle", required=True)
     p.add_argument("--ndk-version", default="28.2.13676358")
     p.add_argument("--build-tools-version", default="35.0.0")
+    p.add_argument("--dev-version-code", required=True, type=int)
     a = p.parse_args()
     if not a.trust_native_code:
         p.error("Il codice .hnmod non è sandboxed: serve il consenso esplicito --trust-native-code")
@@ -155,7 +156,7 @@ def main():
         run([sys.executable, patched / "tools/android_build.py", "--abi", "arm64-v8a",
              "--sdk", a.sdk, "--java-home", a.java_home, "--gradle", a.gradle,
              "--ndk-version", a.ndk_version, "--build-tools-version", a.build_tools_version,
-             "--public", "--release-candidate"], cwd=patched)
+             "--public", "--dev-build", "hnmod", "--dev-version-code", a.dev_version_code], cwd=patched)
         if not apk.is_file():
             raise RuntimeError("APK ARM64 non prodotto")
         result = ROOT / "horizon-android-hnmod-arm64.apk"
