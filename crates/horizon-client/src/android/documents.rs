@@ -401,6 +401,14 @@ pub fn resolve(choice: Choice) {
         Ok(())
     })();
     match result {
+        Ok(()) if c.kind == Kind::Mods
+            && c.target.extension().is_some_and(|ext| ext == "hnmod") =>
+        {
+            imported(
+                "Native source bundle updated. Android ARM64 compilation is required before it can run.",
+                c.kind,
+            )
+        }
         Ok(()) => imported(
             "Import completed. Enable it in Installed or game settings.",
             c.kind,
