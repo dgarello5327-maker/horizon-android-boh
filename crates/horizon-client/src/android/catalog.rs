@@ -469,7 +469,7 @@ impl Catalog {
         } else if self.page == Page::Mods {
             let native = items.iter().filter(|p| source_only_mod(p)).count();
             format!(
-                "{} .hmod / {} source-only .hnmod (not supported yet)",
+                "{} .hmod / {} native .hnmod source bundles (Android build required)",
                 items.len() - native,
                 native
             )
