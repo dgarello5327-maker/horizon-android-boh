@@ -167,6 +167,23 @@ def main():
             raise RuntimeError("APK ARM64 non prodotto")
         result = ROOT / "horizon-android-hnmod-arm64.apk"
         shutil.copy2(apk, result)
+        metadata = {
+            "schema": 1,
+            "package_id": "dev.horizon.android.dev",
+            "abi": "arm64-v8a",
+            "mod_id": mid,
+            "bundle_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+            "apk_sha256": hashlib.sha256(result.read_bytes()).hexdigest(),
+            "horizon_revision": revision,
+            "horizon_mixins_revision": mixins,
+            "android_fork_commit": head,
+            "rust_toolchain": "1.95.0",
+            "ndk_version": a.ndk_version,
+            "build_tools_version": a.build_tools_version,
+        }
+        (ROOT / "horizon-android-hnmod-arm64.json").write_text(
+            json.dumps(metadata, indent=2) + "\\n", encoding="utf-8"
+        )
         print("APK pronto:", result, flush=True)
     finally:
         subprocess.run(["git", "worktree", "remove", "--force", str(source)], cwd=ROOT, check=False)
