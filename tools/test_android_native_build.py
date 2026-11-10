@@ -27,7 +27,8 @@ class NativeBundleTests(unittest.TestCase):
             archive.writestr("horizon-native.json", json.dumps(manifest))
             archive.writestr(
                 "mixins/sample_mod/horizon-mixin.toml",
-                '[mod]\nid = "sample_mod"\nversion = "1.0.0"\n',
+                '[mod]\nid = "sample_mod"\nversion = "1.0.0"\n'
+                + '[compatibility]\nhorizon_revision = "' + manifest["horizon"] + '"\n',
             )
             archive.writestr("mixins/sample_mod/src/lib.rs", "// test")
             for name, data, mode in extra:
