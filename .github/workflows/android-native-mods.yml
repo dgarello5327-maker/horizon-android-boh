@@ -10,6 +10,9 @@ on:
       - "crates/horizon-client/src/android/launcher_pages.rs"
       - "crates/horizon-mods/**"
       - "tools/test_android_content.py"
+      - "tools/android_native_build.py"
+      - "tools/test_android_native_build.py"
+      - ".github/workflows/android-hnmod-arm64.yml"
       - "Cargo.toml"
       - "Cargo.lock"
       - ".github/workflows/android-native-mods.yml"
@@ -32,6 +35,9 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+
+      - name: Test ARM64 native bundle build input validation
+        run: python3 -m unittest tools/test_android_native_build.py
 
       - name: Install pinned Rust toolchain
         uses: dtolnay/rust-toolchain@master
