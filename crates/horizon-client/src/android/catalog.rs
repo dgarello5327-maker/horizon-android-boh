@@ -340,6 +340,11 @@ impl Catalog {
                     item.kind == horizon_client::content_files::Kind::Mods
                         && item.file == format!("{}.hmod", project.id)
                 }))
+            || (source_only_mod(project)
+                && self.local.iter().any(|item| {
+                    item.kind == horizon_client::content_files::Kind::Mods
+                        && item.file == format!("{}.hnmod", project.id)
+                }))
         {
             return Some("Installed".into());
         }
@@ -560,14 +565,64 @@ impl Catalog {
         let Some(project) = self.results.get(index).cloned() else {
             return;
         };
-        if source_only_mod(&project) {
-            self.status = "This .hnmod needs a separately compiled client. Android support is planned; sandboxed .hmod mods can be installed now.".into();
-            return;
-        }
         if self.busy() || self.download_label(&project).is_some() {
             return;
         }
         let game = self.config.game_home(home);
+        if source_only_mod(&project) {
+            self.downloading = Some((project.source, project.id.clone()));
+            self.failed = None;
+            *self.progress.lock().unwrap_or_else(|e| e.into_inner()) = 0.0;
+            let progress = self.progress.clone();
+            self.job("Checking the native mod package and downloading its source...", move || {
+                use horizon_mods::index;
+                let registry_index = browser::horizon::index()?;
+                let registry_project = registry_index
+                    .project(&project.id)
+                    .ok_or("Native mod is no longer listed in the Horizon registry")?;
+                if registry_project.kind != index::Kind::NativeMod {
+                    return Err("Registry entry is not a native mod".into());
+                }
+                let version = registry_project.versions.iter()
+                    .find(|v| v.game == browser::GAME
+                        && registry_index.revoked(&registry_project.id, &v.file.sha256).is_none())
+                    .ok_or("No available .hnmod version for this Minecraft version")?;
+                let file = browser::FileRef {
+                    url: version.file.url.clone(),
+                    name: version.file.name.clone(),
+                    size: version.file.size,
+                    sha512: None,
+                    sha256: Some(version.file.sha256.clone()),
+                    sha1: None,
+                    primary: true,
+                };
+                let downloads = game.join("mod-browser").join("downloads");
+                std::fs::create_dir_all(&downloads).map_err(|e| e.to_string())?;
+                let fetched = browser::horizon::Registry.fetch(&file, &downloads, &|fraction| {
+                    if fraction.is_finite() {
+                        *progress.lock().unwrap_or_else(|e| e.into_inner()) = fraction.clamp(0.0, 1.0);
+                    }
+                })?;
+                let trust = index::check_file(&registry_index, registry_project, version, &fetched)?;
+                let bundle = horizon_mods::index::native::Bundle::read(&fetched)?;
+                let directory = game.join("horizon-mods");
+                std::fs::create_dir_all(&directory).map_err(|e| e.to_string())?;
+                let destination = directory.join(format!("{}.hnmod", bundle.manifest.id));
+                let staged = directory.join(format!(".{}.hnmod.partial", bundle.manifest.id));
+                std::fs::copy(&fetched, &staged).map_err(|e| e.to_string())?;
+                if destination.exists() {
+                    let backup = directory.join(format!("{}.hnmod.previous", bundle.manifest.id));
+                    std::fs::copy(&destination, backup).map_err(|e| e.to_string())?;
+                }
+                std::fs::rename(&staged, &destination).map_err(|e| e.to_string())?;
+                let _ = std::fs::remove_file(fetched);
+                Ok(Reply::Done(
+                    format!("Downloaded {} {} ({:?}). Source saved; Android ARM64 compilation is required before it can run.", bundle.manifest.id, bundle.manifest.version, trust),
+                    horizon_client::content_files::Kind::Mods,
+                ))
+            });
+            return;
+        }
         if project.kind != Kind::ResourcePack
             && !(project.kind == Kind::Shader
                 && matches!(
