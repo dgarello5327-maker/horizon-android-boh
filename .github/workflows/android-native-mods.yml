@@ -37,7 +37,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Test ARM64 native bundle build input validation
-        run: python3 -m unittest tools/test_android_native_build.py
+        run: python3 tools/test_android_native_build.py
 
       - name: Install pinned Rust toolchain
         uses: dtolnay/rust-toolchain@master
