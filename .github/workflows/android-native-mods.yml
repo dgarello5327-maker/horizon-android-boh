@@ -1,0 +1,47 @@
+name: Android native mod import checks
+
+on:
+  pull_request:
+    branches: [android]
+    paths:
+      - "crates/horizon-client/src/content_files.rs"
+      - "crates/horizon-client/src/android/catalog.rs"
+      - "crates/horizon-client/src/android/documents.rs"
+      - "crates/horizon-client/src/android/launcher_pages.rs"
+      - "crates/horizon-mods/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/android-native-mods.yml"
+  push:
+    branches: [a54-optimization-hnmod-support]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-native-mod-import-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-native-bundles:
+    name: Validate native bundle parser and Android import
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install pinned Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.95.0"
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Test upstream native bundle validation
+        run: cargo test -p horizon-mods --features index
+
+      - name: Test Android add-on archive validation
+        run: cargo test -p horizon-client --no-default-features content_files::tests::validates_structure_paths_metadata_and_cancellation
