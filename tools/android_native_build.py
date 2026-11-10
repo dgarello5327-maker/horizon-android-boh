@@ -182,7 +182,7 @@ def main():
             "build_tools_version": a.build_tools_version,
         }
         (ROOT / "horizon-android-hnmod-arm64.json").write_text(
-            json.dumps(metadata, indent=2) + "\\n", encoding="utf-8"
+            json.dumps(metadata, indent=2) + "\n", encoding="utf-8"
         )
         print("APK pronto:", result, flush=True)
     finally:
