@@ -132,7 +132,7 @@ def main():
     a = p.parse_args()
     if not a.trust_native_code:
         p.error("Il codice .hnmod non è sandboxed: serve il consenso esplicito --trust-native-code")
-    work = ROOT / ".local/android-native"
+    work = ROOT.parent / (ROOT.name + "-android-native-work")
     if work.exists():
         shutil.rmtree(work)
     work.mkdir(parents=True)
