@@ -80,6 +80,7 @@ jobs:
       - name: Apply native mixins and compile the ARM64 APK
         env:
           HNMOD_URL: ${{ inputs.bundle_url }}
+          BUILD_VERSION_CODE: ${{ github.run_number }}
         run: |
           python tools/android_native_build.py \
             --bundle-url "$HNMOD_URL" \
@@ -88,7 +89,8 @@ jobs:
             --java-home "$JAVA_HOME" \
             --gradle "$(command -v gradle)" \
             --ndk-version "$ANDROID_NDK_VERSION" \
-            --build-tools-version "$ANDROID_BUILD_TOOLS_VERSION"
+            --build-tools-version "$ANDROID_BUILD_TOOLS_VERSION" \\
+            --dev-version-code "$BUILD_VERSION_CODE"
 
       - name: Upload ARM64 APK
         uses: actions/upload-artifact@v4
