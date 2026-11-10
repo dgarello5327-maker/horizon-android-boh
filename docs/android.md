@@ -44,17 +44,19 @@ for cloud restrictions and the frontend-independent game contract.
 ## Launcher
 
 - **Play:** install resources and launch a world or server.
-- **Mods:** import native Horizon packages using a direct HTTPS `.hmod` URL
-  on 64-bit builds. New packages are disabled until enabled in Installed.
+- **Mods:** import sandboxed `.hmod` packages from HTTPS on 64-bit builds. Source-only
+  `.hnmod` bundles can also be imported from Files, direct HTTPS URLs or the Horizon
+  registry. Android validates and stores them as source; they are not executable until
+  an Android ARM64 native-build pipeline is available.
 - **Packs:** find and install resource packs with checksum verification.
 - **Installed:** enable, disable or remove installed additions.
 - **Settings:** rendering mode, input mode, profile, server and orientation.
   Profiles keep separate saves and settings. Offline player names are edited
   alongside Microsoft sign-in in **Accounts**.
 
-Java mod search and modpack import are not available on Android. Fabric, Forge,
-NeoForge and Mixin code require native ports; installing their JARs does not make
-them executable by this engine. See [Android feature support](android-features.md).
+Java mod search and modpack import are not available on Android. Fabric, Forge and
+NeoForge JARs do not run in this engine. `.hnmod` is a separate Horizon native-mixin
+format; importing it does not compile or activate it. See [Android feature support](android-features.md).
 
 The installer displays the current stage: metadata checks, resource download,
 unpacking, world-data preparation, touch textures and finalization. Progress shows
@@ -113,7 +115,7 @@ custom button deletes that binding; removing a built-in hides it. Done saves;
 Cancel/Android Back restores the previous layout. Multi-key macros are not implemented.
 
 The top row includes F3, chat, pause, Options and F5 perspective. The auxiliary
-`...` drawer retains F1–F12 and other Java keys. Multiple fingers or **Hold F3**
+`...` drawer retains F1â€“F12 and other Java keys. Multiple fingers or **Hold F3**
 allow combinations. Menus support taps, list swipes and slider/inventory dragging.
 Android Back closes the keyboard first, then the current screen.
 
@@ -169,7 +171,7 @@ launcher entry; TV support is experimental and analog gamepad axes are not conne
 
 F2 keeps the original PNG in the profile and publishes a copy to
 **Pictures/HorizonAndroid** through Android MediaStore. Android 10+ needs no
-storage permission. Android 8.1�9 asks for storage permission when first saving;
+storage permission. Android 8.1–9 asks for storage permission when first saving;
 if access is denied, the profile copy remains available. Gallery publication runs
 outside the render thread and reports success or failure in game chat.
 
