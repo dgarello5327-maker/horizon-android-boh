@@ -1,11 +1,24 @@
 # Android native mod support plan
 
-Status: `.hnmod` import and validation are implemented on the Android branch. The
-app can import from the Android document picker, a direct HTTPS URL or the Horizon
-registry; registry downloads are checked against the index hash and signature.
-Imported bundles are stored in `horizon-mods/` as source. They are **not compiled
-or executed** by Android yet. The existing runtime remains the sandboxed Wasmtime
-`.hmod` path on 64-bit builds.
+Status: Android can import and validate .hnmod source bundles and can now
+compile one into a separate ARM64 Android APK through a manual GitHub Actions
+workflow. The build downloads the bundle over HTTPS, checks its manifest and
+revision pins, applies the pinned horizon-mixins tool to the exact pinned
+Horizon source, reapplies this fork's Android-port changes, and builds the
+horizon-android package for aarch64-linux-android.
+
+The workflow requires an explicit yes-I-trust-this-native-code selection.
+The resulting APK is published as a GitHub Actions artifact under the separate
+development package ID dev.horizon.android.dev, so it does not replace the
+normal Android app. Each workflow run uses a temporary signing key; to install
+a later build over an earlier development APK, uninstall the old development
+APK first. The main app and its data are left alone.
+
+This is a CI build path, not yet an in-app build/install flow. The build accepts
+a public HTTPS .hnmod URL, and the bundle's Horizon revision must be an
+ancestor of the selected Android fork revision. Builds for unrelated or newer
+Horizon pins are rejected rather than silently applying patches to the wrong
+source. The produced APK still needs physical Galaxy A54 testing.
 
 ## What a native package contains
 
@@ -30,19 +43,22 @@ package as executable code with the app user's privileges.
 2. Show the package identity, version, requested compatibility and a prominent
    untrusted-code warning. Require explicit per-package consent; never build or
    enable a package automatically.
-3. Send the validated source bundle and exact upstream revision pins to a
-   reproducible CI build job. The job must use the Android NDK, Rust
-   `aarch64-linux-android` target and the project's pinned toolchain. It must
-   apply horizon-mixins to the exact Horizon source revision before building.
-4. Verify the resulting artifact's provenance, ABI, package ID, source hash,
-   toolchain/revision pins and signature before the Android app accepts it.
-5. Install it as a distinct game build, preserving the original game and a
-   rollback path. A failed build must leave the current install playable.
+3. Run the manual Build Android ARM64 client with a native mod workflow from
+   the Android fork's Actions tab. Supply a public HTTPS .hnmod URL and select
+   yes only when the source is trusted. The job uses the pinned NDK and Rust
+   toolchain, applies horizon-mixins at the exact revision and compiles the
+   Android client.
+4. Download the horizon-android-hnmod-arm64 artifact from the completed run.
+   It is a separate development app; it does not update or overwrite the normal
+   Android installation. The app does not yet verify build provenance or install
+   the artifact itself.
 
-The source build is not a simple Cargo cross-compile: the upstream launcher
-resolves revisions, applies source mixins, builds a separate game and tracks
-which mods were left out. Those semantics must be ported or deliberately
-reimplemented before source builds can be called compatible.
+The CI builder currently handles one source bundle per build. It reconstructs
+this Android fork on the exact pinned Horizon commit and refuses a pin that is
+not an ancestor of the selected fork revision. The full desktop launcher's
+multi-mod dependency resolution, isolation/retry behaviour and post-build
+steps are not yet ported; bundles relying on those advanced features may fail
+rather than being treated as compatible.
 
 ### 2. Prebuilt ARM64 artifacts
 
@@ -73,12 +89,11 @@ measurements on the physical device.
 ## Current implementation boundary
 
 - Sandboxed `.hmod`: supported by the existing Wasmtime runtime on 64-bit builds.
-- Source `.hnmod`: import, upstream-format validation and verified registry download are implemented; Android compilation and execution are not.
+- Source `.hnmod`: import and verified registry download are implemented; a manual CI workflow compiles one bundle into a separate ARM64 development APK. In-app compilation, installation and provenance verification are not implemented.
 - Prebuilt ARM64 code inside `.hnmod`: not part of the current upstream package
   schema and must be rejected until a separately specified artifact format exists.
 - Fabric, Forge and NeoForge JARs: not executable by Horizon Android.
 
 ## Completion criteria
 
-Native execution support is complete only when the Android build pipeline produces a verified ARM64 game artifact from a real source bundle,
-the app enforces trust consent and rollback, and a physical Galaxy A54 completes the end-to-end tests above.
+Native support is complete only when the app verifies build provenance, provides in-app consent and installation/rollback, handles multi-mod dependency and post-build semantics, and a physical Galaxy A54 completes the end-to-end tests above.
