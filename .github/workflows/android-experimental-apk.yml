@@ -69,6 +69,9 @@ jobs:
           restore-keys: |
             horizon-android-arm64-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'packaging/android/build.gradle') }}-
 
+      - name: Confirm ARM64 experimental build trigger
+        run: echo "Building Horizon Android ARM64 from $GITHUB_SHA"
+
       - name: Check public source and packaging boundaries
         run: |
           python3 tools/check_public_tree.py
