@@ -3,7 +3,7 @@
 A native Android port of [Horizon](https://github.com/ludovic111/horizon), the
 Rust engine for Minecraft Java 26.3. Unofficial and in active development.
 
-**Android 9+ · Vulkan · Four touch schemes · Sandboxed `.hmod` mods**
+**Android 9+ · Vulkan · Four touch schemes · Sandboxed `.hmod` mods · `.hnmod` source import**
 
 [Download APK](https://github.com/Vasysik/horizon-android/releases) · [Build & play](docs/android.md) · [Contribute](CONTRIBUTING_ANDROID.md) ·
 [Report an Android bug](https://github.com/Vasysik/horizon-android/issues/new?template=android-bug.yml) ·
@@ -16,15 +16,19 @@ Rust engine for Minecraft Java 26.3. Unofficial and in active development.
   360-degree movement, Auto Sprint and Sprint-button visibility.
 - Java multiplayer, including the Hypixel Arcade lobby shown below.
 - Native launcher, verified resource downloads, resource packs and `.hmod` import.
+- `.hnmod` source import and validation; a manual GitHub Actions workflow can compile one supported native bundle into a separate ARM64 development APK.
 - Vulkan rendering modes and resolution scaling; Android keyboard, clipboard,
   AAudio sound and phone vibration through the existing game settings.
 - Account status and Android Keystore storage; the current sign-in configuration
   is still for development. [Feature support and remaining work](docs/android-features.md).
 
 The engine targets Minecraft Java **26.3**. Sandboxed `.hmod`
-code mods run on 64-bit APKs. Source-only `.hnmod` mods require a separately
-compiled client and are not supported on Android yet. Fabric/Forge Java code
-does not run in this client. Server and anticheat
+code mods run on 64-bit APKs. Source-only `.hnmod` bundles can be compiled by
+running the manual `Build Android ARM64 client with a native mod` GitHub Actions
+workflow; it produces a separate development APK for supported bundles. The
+workflow currently handles one basic mixin bundle at a time, not trait APIs,
+extra native crates or post-build steps. Compilation is not yet available inside
+the app. Fabric/Forge Java code does not run in this client. Server and anticheat
 compatibility requires testing on the actual server.
 
 ## On Android

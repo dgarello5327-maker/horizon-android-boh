@@ -340,6 +340,11 @@ impl Catalog {
                     item.kind == horizon_client::content_files::Kind::Mods
                         && item.file == format!("{}.hmod", project.id)
                 }))
+            || (source_only_mod(project)
+                && self.local.iter().any(|item| {
+                    item.kind == horizon_client::content_files::Kind::Mods
+                        && item.file == format!("{}.hnmod", project.id)
+                }))
         {
             return Some("Installed".into());
         }
@@ -427,7 +432,7 @@ impl Catalog {
                 self.import_native(home);
             } else {
                 self.results.clear();
-                self.status = "Press Import .hmod to download this HTTPS link".into();
+                self.status = "Press Import to download this HTTPS .hmod or .hnmod link".into();
             }
             return;
         }
@@ -464,7 +469,7 @@ impl Catalog {
         } else if self.page == Page::Mods {
             let native = items.iter().filter(|p| source_only_mod(p)).count();
             format!(
-                "{} .hmod / {} source-only .hnmod (not supported yet)",
+                "{} .hmod / {} native .hnmod source bundles (Android build required)",
                 items.len() - native,
                 native
             )
@@ -510,36 +515,137 @@ impl Catalog {
     }
     pub fn import_native(&mut self, home: &Path) {
         let url = self.query.trim().to_owned();
+        let native = url.split(['?', '#']).next().unwrap_or(&url).to_ascii_lowercase().ends_with(".hnmod");
         let game = self.config.game_home(home);
-        self.job("Downloading sandboxed .hmod over HTTPS...",move||{
+        self.job(if native { "Downloading native .hnmod source bundle over HTTPS..." } else { "Downloading sandboxed .hmod over HTTPS..." }, move || {
             use std::io::Read;
-            let mut bytes=Vec::new();
-            ureq::AgentBuilder::new().https_only(true).timeout_connect(std::time::Duration::from_secs(20)).timeout_read(std::time::Duration::from_secs(90)).build().get(&url).call().map_err(|e|e.to_string())?.into_reader().take(32*1024*1024+1).read_to_end(&mut bytes).map_err(|e|e.to_string())?;
-            if bytes.len()>32*1024*1024 {return Err("Horizon mod exceeds 32 MiB".into());}
-            let dir=game.join("horizon-mods");std::fs::create_dir_all(&dir).map_err(|e|e.to_string())?;
-            let stage=dir.join("import.partial");std::fs::write(&stage,bytes).map_err(|e|e.to_string())?;
-            let result=(||{
-                let package=horizon_mods::Package::read(&stage)?;
-                let destination=dir.join(format!("{}.hmod",package.manifest.id));
-                if destination.exists(){std::fs::copy(&destination,destination.with_extension("hmod.previous")).map_err(|e|e.to_string())?;}
-                std::fs::rename(&stage,destination).map_err(|e|e.to_string())?;
-                Ok(Reply::Done(format!("Installed {}. Enable it in Installed after reviewing its capabilities in game Mods.",package.manifest.name), horizon_client::content_files::Kind::Mods))
+            let limit = if native { 64 * 1024 * 1024 } else { 32 * 1024 * 1024 };
+            let mut bytes = Vec::new();
+            ureq::AgentBuilder::new()
+                .https_only(true)
+                .timeout_connect(std::time::Duration::from_secs(20))
+                .timeout_read(std::time::Duration::from_secs(90))
+                .build()
+                .get(&url)
+                .call()
+                .map_err(|e| e.to_string())?
+                .into_reader()
+                .take(limit as u64 + 1)
+                .read_to_end(&mut bytes)
+                .map_err(|e| e.to_string())?;
+            if bytes.len() as u64 > limit {
+                return Err(if native { "Native Horizon mod exceeds 64 MiB" } else { "Horizon mod exceeds 32 MiB" }.into());
+            }
+            let dir = game.join("horizon-mods");
+            std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+            let stage = dir.join(if native { "import-native.partial" } else { "import.partial" });
+            std::fs::write(&stage, bytes).map_err(|e| e.to_string())?;
+            let result = (|| {
+                let (destination, description) = if native {
+                    let bundle = horizon_mods::index::native::Bundle::read(&stage)?;
+                    (dir.join(format!("{}.hnmod", bundle.manifest.id)),
+                     format!("Saved native source {} {}. It needs an Android ARM64 build before it can run.", bundle.manifest.id, bundle.manifest.version))
+                } else {
+                    let package = horizon_mods::Package::read(&stage)?;
+                    (dir.join(format!("{}.hmod", package.manifest.id)),
+                     format!("Installed {}. Enable it in Installed after reviewing its capabilities in game Mods.", package.manifest.name))
+                };
+                if destination.exists() {
+                    let backup = destination.with_file_name(format!("{}.previous", destination.file_name().unwrap_or_default().to_string_lossy()));
+                    std::fs::copy(&destination, backup).map_err(|e| e.to_string())?;
+                }
+                std::fs::rename(&stage, destination).map_err(|e| e.to_string())?;
+                Ok(Reply::Done(description, horizon_client::content_files::Kind::Mods))
             })();
-            let _=std::fs::remove_file(stage);result
+            let _ = std::fs::remove_file(stage);
+            result
         });
     }
     pub fn install(&mut self, home: &Path, index: usize) {
         let Some(project) = self.results.get(index).cloned() else {
             return;
         };
-        if source_only_mod(&project) {
-            self.status = "This .hnmod needs a separately compiled client. Android support is planned; sandboxed .hmod mods can be installed now.".into();
-            return;
-        }
         if self.busy() || self.download_label(&project).is_some() {
             return;
         }
         let game = self.config.game_home(home);
+        if source_only_mod(&project) {
+            self.downloading = Some((project.source, project.id.clone()));
+            self.failed = None;
+            *self.progress.lock().unwrap_or_else(|e| e.into_inner()) = 0.0;
+            let progress = self.progress.clone();
+            self.job("Checking the native mod package and downloading its source...", move || {
+                use horizon_mods::index;
+                let registry_index = browser::horizon::index()?;
+                let registry_project = registry_index
+                    .project(&project.id)
+                    .ok_or("Native mod is no longer listed in the Horizon registry")?;
+                if registry_project.kind != index::Kind::NativeMod {
+                    return Err("Registry entry is not a native mod".into());
+                }
+                let version = registry_project.versions.iter()
+                    .find(|v| v.game == browser::GAME
+                        && registry_index.revoked(&registry_project.id, &v.file.sha256).is_none())
+                    .ok_or("No available .hnmod version for this Minecraft version")?;
+                let file = browser::FileRef {
+                    url: version.file.url.clone(),
+                    name: version.file.name.clone(),
+                    size: version.file.size,
+                    sha512: None,
+                    sha256: Some(version.file.sha256.clone()),
+                    sha1: None,
+                    primary: true,
+                };
+                let downloads = game.join("mod-browser").join("downloads");
+                std::fs::create_dir_all(&downloads).map_err(|e| e.to_string())?;
+                let fetched = browser::horizon::Registry.fetch(&file, &downloads, &|fraction| {
+                    if fraction.is_finite() {
+                        *progress.lock().unwrap_or_else(|e| e.into_inner()) = fraction.clamp(0.0, 1.0);
+                    }
+                })?;
+                let trust = index::check_file(&registry_index, registry_project, version, &fetched)?;
+                let bundle = horizon_mods::index::native::Bundle::read(&fetched)?;
+                let directory = game.join("horizon-mods");
+                std::fs::create_dir_all(&directory).map_err(|e| e.to_string())?;
+                if std::fs::symlink_metadata(&directory)
+                    .is_ok_and(|metadata| metadata.file_type().is_symlink())
+                {
+                    return Err("Refusing a redirected native-mod directory".into());
+                }
+                let destination = directory.join(format!("{}.hnmod", bundle.manifest.id));
+                if std::fs::symlink_metadata(&destination)
+                    .is_ok_and(|metadata| !metadata.is_file() || metadata.file_type().is_symlink())
+                {
+                    return Err("Refusing to replace a non-regular native bundle".into());
+                }
+                let staged = directory.join(format!(
+                    ".{}.{}.hnmod.partial",
+                    bundle.manifest.id,
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map_err(|e| e.to_string())?
+                        .as_nanos()
+                ));
+                std::fs::copy(&fetched, &staged).map_err(|e| e.to_string())?;
+                if destination.exists() {
+                    let backup = directory.join(format!("{}.hnmod.previous", bundle.manifest.id));
+                    if std::fs::symlink_metadata(&backup)
+                        .is_ok_and(|metadata| !metadata.is_file() || metadata.file_type().is_symlink())
+                    {
+                        let _ = std::fs::remove_file(&staged);
+                        return Err("Refusing to overwrite an unsafe native-mod backup".into());
+                    }
+                    std::fs::copy(&destination, backup).map_err(|e| e.to_string())?;
+                }
+                std::fs::rename(&staged, &destination).map_err(|e| e.to_string())?;
+                let _ = std::fs::remove_file(fetched);
+                Ok(Reply::Done(
+                    format!("Downloaded {} {} ({:?}). Source saved; Android ARM64 compilation is required before it can run.", bundle.manifest.id, bundle.manifest.version, trust),
+                    horizon_client::content_files::Kind::Mods,
+                ))
+            });
+            return;
+        }
         if project.kind != Kind::ResourcePack
             && !(project.kind == Kind::Shader
                 && matches!(

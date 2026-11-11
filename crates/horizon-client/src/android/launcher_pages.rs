@@ -639,7 +639,6 @@ impl Launcher {
                 let y = top + (row + bundled.len()) as f32 * 78.0 - self.catalog.scroll;
                 let download = self.catalog.download_label(p);
                 if download.is_none()
-                    && !crate::catalog::source_only_mod(p)
                     && !(p.kind == crate::browser::Kind::Mod
                         && p.source == crate::browser::SourceId::Modrinth)
                 {
@@ -667,13 +666,13 @@ impl Launcher {
                         "Java mod",
                     );
                 } else if crate::catalog::source_only_mod(p) {
-                    ui.text(
-                        Face::Regular,
-                        14.0,
-                        w - 150.0,
-                        y + 12.0,
-                        color::MUTED,
-                        ".hnmod: later",
+                    button(
+                        &mut ui,
+                        &mut self.targets,
+                        [w - 150.0, y, 118.0, 42.0],
+                        self.catalog.install_button(p),
+                        Action::Install(i),
+                        false,
                     );
                 } else if p.kind == crate::browser::Kind::Mod && !cfg!(target_pointer_width = "64")
                 {
@@ -780,15 +779,17 @@ impl Launcher {
                 {
                     let y = top + offset - self.catalog.scroll;
                     offset += row_height;
-                    self.list_targets.push((
-                        [
-                            if compact { 32.0 } else { w - 300.0 },
-                            y,
-                            120.0,
-                            row_height - 4.0,
-                        ],
-                        Action::ToggleLocal(i),
-                    ));
+                    if !(kind == Kind::Mods && item.file.ends_with(".hnmod")) {
+                        self.list_targets.push((
+                            [
+                                if compact { 32.0 } else { w - 300.0 },
+                                y,
+                                120.0,
+                                row_height - 4.0,
+                            ],
+                            Action::ToggleLocal(i),
+                        ));
+                    }
                     self.list_targets.push((
                         [w - 165.0, y, 133.0, row_height - 4.0],
                         Action::DeleteLocal(i),
@@ -811,7 +812,16 @@ impl Launcher {
                         color::MUTED,
                         kind.label(),
                     );
-                    if kind == Kind::Mods && !cfg!(target_pointer_width = "64") {
+                    if kind == Kind::Mods && item.file.ends_with(".hnmod") {
+                        ui.text(
+                            Face::Regular,
+                            14.0,
+                            if compact { 32.0 } else { w - 300.0 },
+                            y + if compact { 62.0 } else { 12.0 },
+                            color::MUTED,
+                            "Native source · build required",
+                        );
+                    } else if kind == Kind::Mods && !cfg!(target_pointer_width = "64") {
                         ui.text(
                             Face::Regular,
                             14.0,

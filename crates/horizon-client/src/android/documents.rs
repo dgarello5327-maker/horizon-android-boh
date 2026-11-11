@@ -289,7 +289,12 @@ fn stage(request: Request, mut input: std::fs::File, name: String) -> Result<()>
         let native_shader = content_files::validate(&staged, request.kind, &name, || {
             CANCEL.load(Ordering::Relaxed)
         })?;
-        let name = if request.kind == Kind::Mods {
+        let name = if request.kind == Kind::Mods
+            && name.to_ascii_lowercase().ends_with(".hnmod")
+        {
+            let bundle = horizon_mods::index::native::Bundle::read(&staged)?;
+            format!("{}.hnmod", bundle.manifest.id)
+        } else if request.kind == Kind::Mods {
             format!("{}.hmod", horizon_mods::Package::read(&staged)?.manifest.id)
         } else if native_shader || name.to_ascii_lowercase().ends_with(".hshader") {
             let pack = horizon_shader_api::Pack::read(&staged)?;
@@ -319,14 +324,13 @@ fn stage(request: Request, mut input: std::fs::File, name: String) -> Result<()>
             );
         } else {
             std::fs::rename(&staged, &target)?;
-            imported(
-                format!(
-                    "Imported {} into {}. Enable it in game settings.",
-                    target.file_name().unwrap_or_default().to_string_lossy(),
-                    request.kind.label()
-                ),
-                request.kind,
-            );
+            let filename = target.file_name().unwrap_or_default().to_string_lossy();
+            let message = if filename.ends_with(".hnmod") {
+                format!("Imported {filename}. Native source saved; it must be compiled for Android before it can run.")
+            } else {
+                format!("Imported {filename} into {}. Enable it in game settings.", request.kind.label())
+            };
+            imported(message, request.kind);
         }
         Ok(())
     })();
@@ -397,6 +401,14 @@ pub fn resolve(choice: Choice) {
         Ok(())
     })();
     match result {
+        Ok(()) if c.kind == Kind::Mods
+            && c.target.extension().is_some_and(|ext| ext == "hnmod") =>
+        {
+            imported(
+                "Native source bundle updated. Android ARM64 compilation is required before it can run.",
+                c.kind,
+            )
+        }
         Ok(()) => imported(
             "Import completed. Enable it in Installed or game settings.",
             c.kind,
