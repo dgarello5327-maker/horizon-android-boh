@@ -162,7 +162,7 @@ fn row(home: &Path, id: &str) -> io::Result<Value> {
     } else {
         match doc.path.extension().and_then(|s| s.to_str()) {
             Some("jsonl") => "application/x-ndjson",
-            Some("zip" | "hmod" | "hshader") => "application/zip",
+            Some("zip" | "hmod" | "hnmod" | "hshader") => "application/zip",
             Some("png") => "image/png",
             Some("json") => "application/json",
             Some("txt" | "wgsl" | "glsl" | "fsh" | "vsh" | "toml") => "text/plain",
@@ -412,6 +412,11 @@ mod tests {
         }
         call(&home, "create", "p0/mods", "test.hmod").unwrap();
         assert!(call(&home, "create", "p0/mods", "test.hmod").is_err());
+        fs::write(home.join("horizon-mods/source.hnmod"), b"native source").unwrap();
+        assert_eq!(
+            row(&home, "p0/mods/source.hnmod").unwrap()["mime_type"],
+            "application/zip"
+        );
         fs::write(home.join("horizon-mods/test.hmod"), b"original").unwrap();
         call(&home, "create", "p0/mods", "other.hmod").unwrap();
         assert!(call(&home, "rename", "p0/mods/other.hmod", "test.hmod").is_err());
