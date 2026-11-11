@@ -65,6 +65,18 @@ def download_game(version, directory):
     manifest_path = versions / f'{version}.json'
     lab.download(entry['url'], manifest_path, entry['sha1'])
     manifest = json.loads(manifest_path.read_text())
+    # horizon-prepare validates its pinned vanilla manifest from the repository
+    # root's canonical .local/minecraft/<version>/manifest.json location.
+    # Mojang can republish the version catalog JSON, so use the immutable,
+    # content-addressed manifest URL pinned by Horizon's own validation error.
+    pinned_manifest_url = "https://piston-meta.mojang.com/v1/packages/11f1aefe473eefba0af62e3286c33b692807b2eb/26.3.json"
+    pinned_manifest_sha1 = "11f1aefe473eefba0af62e3286c33b692807b2eb"
+    canonical_manifest = ROOT / ".local/minecraft" / version / "manifest.json"
+    lab.download(pinned_manifest_url, canonical_manifest, pinned_manifest_sha1)
+    canonical_data = json.loads(canonical_manifest.read_text())
+    if canonical_data.get("id") != version:
+        raise ValueError(f"Pinned Mojang manifest is not for {version}")
+    manifest = canonical_data
     files = []
     for side in ['client', 'server']:
         artifact = manifest['downloads'][side]
