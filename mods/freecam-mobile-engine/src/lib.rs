@@ -53,4 +53,6 @@ impl Freecam {
     #[test] fn forward_moves_camera(){let mut c=Freecam::default();c.activate(Vec3::ZERO,0.0,0.0);c.step(FreecamInput{forward:1.0,..Default::default()},1.0);assert!((c.position.z-4.0).abs()<1e-9);}
     #[test] fn diagonal_is_normalized(){let mut c=Freecam::default();c.activate(Vec3::ZERO,0.0,0.0);c.step(FreecamInput{forward:1.0,strafe:1.0,..Default::default()},1.0);let d=(c.position.x*c.position.x+c.position.z*c.position.z).sqrt();assert!((d-4.0).abs()<1e-9);}
     #[test] fn speed_is_bounded(){let mut c=Freecam::default();c.set_speed(500.0);assert_eq!(c.speed,32.0);}
+    #[test] fn vertical_input_moves_up() { let mut c=Freecam::default(); c.activate(Vec3::ZERO,0.0,0.0); c.step(FreecamInput{vertical:1.0,..Default::default()},0.5); assert!((c.position.y-2.0).abs()<1e-9); }
+    #[test] fn fast_mode_multiplies_speed() { let mut c=Freecam::default(); c.activate(Vec3::ZERO,0.0,0.0); c.step(FreecamInput{forward:1.0,fast:true,..Default::default()},0.5); assert!((c.position.z-6.0).abs()<1e-9); }
 }
