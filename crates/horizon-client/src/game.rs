@@ -18414,6 +18414,7 @@ impl<'a> Game<'a> {
             adv_ui: Default::default(),
             links_ui: Default::default(),
             camera_type: Default::default(),
+            freecam: Default::default(),
             fangs: Default::default(),
             player_model: None,
         })
