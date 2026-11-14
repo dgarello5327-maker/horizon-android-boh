@@ -1,0 +1,22 @@
+name: Freecam Mobile Core
+
+on:
+  push:
+    branches: [feature/freecam-mobile-26.3]
+    paths:
+      - 'mods/freecam-mobile-engine/**'
+      - '.github/workflows/freecam-mobile-core.yml'
+  pull_request:
+    paths:
+      - 'mods/freecam-mobile-engine/**'
+      - '.github/workflows/freecam-mobile-core.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Run Freecam controller tests
+        run: cargo test --manifest-path mods/freecam-mobile-engine/Cargo.toml
