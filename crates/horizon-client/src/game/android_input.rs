@@ -202,6 +202,10 @@ impl Game<'_> {
             if self.debug_key(key, action) {
                 continue;
             }
+            if down && key == KeyCode::F6 {
+                self.toggle_freecam();
+                continue;
+            }
             for mapped in self.settings.keys.translate_all(key) {
                 let result = match mapped {
                     Ok(code) => self.mapped_key(code, down, false),
