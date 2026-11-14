@@ -5,6 +5,8 @@ on:
     branches: [feature/freecam-mobile-26.3]
     paths:
       - 'mods/freecam-mobile-engine/**'
+      - 'crates/horizon-client/src/game/**'
+      - 'crates/horizon-client/src/game.rs'
       - '.github/workflows/freecam-mobile-core.yml'
   pull_request:
     paths:
@@ -20,3 +22,5 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Run Freecam controller tests
         run: cargo test --manifest-path mods/freecam-mobile-engine/Cargo.toml
+      - name: Check Horizon client integration
+        run: cargo check -p horizon-client
