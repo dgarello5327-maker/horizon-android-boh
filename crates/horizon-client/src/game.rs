@@ -233,6 +233,7 @@ mod pandas;
 mod passengers;
 mod persist;
 mod perspective;
+mod freecam;
 mod pick_entity;
 mod pickups;
 mod piglins;
@@ -2853,6 +2854,8 @@ struct Game<'a> {
     /// The Server Links screens' state (game/server_links.rs).
     links_ui: server_links::LinksUi,
     camera_type: perspective::CameraType,
+    /// Detached Freecam camera, independent of the player entity.
+    freecam: freecam::Freecam,
     fangs: fangs::FangState,
     /// The local player as a model (third person, the inventory).
     player_model: Option<Mob>,
