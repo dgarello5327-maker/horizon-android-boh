@@ -9,9 +9,9 @@ impl Freecam {
  pub fn step_keys(&mut self, keys:&std::collections::HashSet<KeyCode>, dt:f64) {
   if !self.enabled || !dt.is_finite() || dt<=0.0 {return;}
   let down=|k| keys.contains(&k);
-  let f=f64::from(down(KeyCode::KeyW))-f64::from(down(KeyCode::KeyS));
-  let s=f64::from(down(KeyCode::KeyD))-f64::from(down(KeyCode::KeyA));
-  let v=f64::from(down(KeyCode::Space))-f64::from(down(KeyCode::ShiftLeft));
+  let f=(if down(KeyCode::KeyW){1.0}else{0.0})-(if down(KeyCode::KeyS){1.0}else{0.0});
+  let s=(if down(KeyCode::KeyD){1.0}else{0.0})-(if down(KeyCode::KeyA){1.0}else{0.0});
+  let v=(if down(KeyCode::Space){1.0}else{0.0})-(if down(KeyCode::ShiftLeft){1.0}else{0.0});
   let y=f64::from(self.yaw).to_radians(); let p=f64::from(self.pitch).to_radians();
   let forward=DVec3::new(-y.sin()*p.cos(),-p.sin(),y.cos()*p.cos());
   let right=DVec3::new(y.cos(),0.0,y.sin());
