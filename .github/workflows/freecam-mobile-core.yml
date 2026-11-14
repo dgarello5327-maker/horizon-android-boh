@@ -22,5 +22,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Run Freecam controller tests
         run: cargo test --manifest-path mods/freecam-mobile-engine/Cargo.toml
+      - name: Install Linux audio build dependency
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libasound2-dev
       - name: Check Horizon client integration
         run: cargo check -p horizon-client
