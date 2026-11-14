@@ -228,6 +228,14 @@ fn wrap(d: f32) -> f32 {
     }
 }
 impl Game<'_> {
+    /// Toggle detached Freecam without moving the player entity.
+    pub(super) fn toggle_freecam(&mut self) {
+        if self.freecam.enabled { self.freecam.deactivate(); return; }
+        if let Some(entity) = self.player_camera_entity() {
+            let eye = glam::DVec3::new(entity.position[0], entity.position[1] + f64::from(entity.eye_height), entity.position[2]);
+            self.freecam.activate(eye, self.yaw, self.pitch);
+        }
+    }
     /// `key.togglePerspective`.
     pub(super) fn cycle_camera(&mut self) {
         let previous = self.camera_type;
@@ -288,11 +296,19 @@ impl Game<'_> {
             (!hit.miss).then_some([hit.hit.location.x, hit.hit.location.y, hit.hit.location.z])
         });
         self.view = view;
-        Some((
-            glam::DVec3::from_array(view.position),
-            view.y_rot,
-            view.x_rot,
-        ))
+        if self.freecam.enabled {
+            let dt = (f64::from(self.frame_ticks) / 20.0).clamp(1.0 / 240.0, 0.05);
+            self.freecam.yaw = self.yaw;
+            self.freecam.pitch = self.pitch.clamp(-89.9, 89.9);
+            self.freecam.step_keys(&self.keys, dt);
+            self.view.position = self.freecam.position.to_array();
+            self.view.eye = self.view.position;
+            self.view.set_rotation(self.freecam.yaw, self.freecam.pitch);
+            self.view.eye_rotation = [self.freecam.yaw, self.freecam.pitch];
+            self.view.detached = true;
+            return Some((self.freecam.position, self.freecam.yaw, self.freecam.pitch));
+        }
+        Some((glam::DVec3::from_array(view.position), view.y_rot, view.x_rot))
     }
     /// The player as `Camera.alignWithEntity` sees it.
     fn player_camera_entity(&mut self) -> Option<CameraEntity> {
