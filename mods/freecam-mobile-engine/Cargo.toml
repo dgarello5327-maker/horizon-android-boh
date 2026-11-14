@@ -7,3 +7,6 @@ edition = "2024"
 path = "src/lib.rs"
 
 [dependencies]
+
+# Keep this standalone crate independent from Horizon's parent workspace.
+[workspace]
